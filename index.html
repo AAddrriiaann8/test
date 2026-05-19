@@ -5,10 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>KAI CENAT MARKET🗿 | Local Edition</title>
   
-  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Space Grotesk Font -->
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
   <style>
@@ -55,7 +53,6 @@
 </head>
 <body class="flex flex-col min-h-screen">
   
-  <!-- Header -->
   <header class="sticky top-0 z-[100] bg-[#050505]/80 backdrop-blur-xl border-b border-white/5 px-6 py-5 md:px-10">
     <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
       <div class="text-2xl md:text-3xl font-display font-black tracking-tighter text-[#00FFC2] flex items-center gap-2 cursor-pointer" onclick="window.location.reload()">
@@ -102,7 +99,6 @@
       </div>
     </div>
 
-    <!-- Grid -->
     <div id="itemGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"></div>
     
     <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-text-muted">
@@ -111,7 +107,6 @@
     </div>
   </main>
 
-  <!-- Modal -->
   <div id="submissionModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="toggleModal()"></div>
     <div class="relative w-full max-w-lg bg-[#121212] border border-white/10 rounded-3xl p-8 shadow-2xl">
@@ -156,6 +151,23 @@
   </footer>
 
   <script>
+    // --- Google Apps Script 整合 ---
+    const APPS_SCRIPT_URL = "PASTE_YOUR_APPS_SCRIPT_URL_HERE";
+
+    // 背景同步至 Google Sheet
+    async function syncToSheet(payload) {
+      if (APPS_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbyU-Cpc6k8pOzFnYZI3lAWCwkQCxbUx0U5v4qFuxfseM7dwdsWIzOYLPqXqKuSQdDr8/exec" || !APPS_SCRIPT_URL) return;
+      try {
+        await fetch(APPS_SCRIPT_URL, {
+          method: 'POST',
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify(payload)
+        });
+      } catch (e) {
+        console.warn("Sync to sheet failed:", e);
+      }
+    }
+
     const STORAGE_KEY = "records";
     const CATEGORIES = ['全部貨品', '電子產品', '潮流服飾', '家居生活', '書籍', '運動器材'];
     
@@ -168,6 +180,9 @@
       const records = loadData();
       records.push(newRecord);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      
+      // [新增] 觸發同步到 Google Sheet
+      syncToSheet({ action: "create", record: newRecord });
     }
 
     // --- 核心函數：讀取資料 ---
@@ -185,7 +200,7 @@
       // 過濾邏輯
       let filtered = records.filter(r => {
         const matchesSearch = r.title.toLowerCase().includes(currentSearch.toLowerCase()) || 
-                             r.content.toLowerCase().includes(currentSearch.toLowerCase());
+                              r.content.toLowerCase().includes(currentSearch.toLowerCase());
         const matchesCat = currentCategory === '全部貨品' || r.category === currentCategory;
         const matchesStatus = currentStatusFilter === 'all' || r.status === currentStatusFilter;
         return matchesSearch && matchesCat && matchesStatus;
@@ -245,6 +260,9 @@
         records[idx].status = records[idx].status === 'active' ? 'done' : 'active';
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
         renderList();
+
+        // [新增] 觸發同步狀態更新到 Google Sheet
+        syncToSheet({ action: "update", id: id, changes: { status: records[idx].status } });
       }
     }
 
@@ -253,6 +271,9 @@
       const records = loadData().filter(r => r.id !== id);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
       renderList();
+
+      // [新增] 觸發同步刪除到 Google Sheet
+      syncToSheet({ action: "delete", id: id });
     }
 
     function toggleModal() {
@@ -266,7 +287,7 @@
     document.getElementById('recordForm').onsubmit = (e) => {
       e.preventDefault();
       
-      // 解析輸入
+      // 解析輸入 (補足 id 與 createdAt 的要求)
       const newRecord = {
         id: Date.now() + "_" + Math.random().toString(36).slice(2,6),
         createdAt: new Date().toISOString(),

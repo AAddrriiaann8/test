@@ -152,11 +152,11 @@
 
   <script>
     // --- Google Apps Script 整合 ---
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyU-Cpc6k8pOzFnYZI3lAWCwkQCxbUx0U5v4qFuxfseM7dwdsWIzOYLPqXqKuSQdDr8/exec";
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzSPJA0yvvNxZpXI6VYWyt_MqdhrcaimvfJUO5hU5nV4DE97fgOrIJwWoH6MNGhDizZ/exec";
 
     // 背景同步至 Google Sheet
     async function syncToSheet(payload) {
-      if (APPS_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbyU-Cpc6k8pOzFnYZI3lAWCwkQCxbUx0U5v4qFuxfseM7dwdsWIzOYLPqXqKuSQdDr8/exec" || !APPS_SCRIPT_URL) return;
+      if (APPS_SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzSPJA0yvvNxZpXI6VYWyt_MqdhrcaimvfJUO5hU5nV4DE97fgOrIJwWoH6MNGhDizZ/exec" || !APPS_SCRIPT_URL) return;
       try {
         await fetch(APPS_SCRIPT_URL, {
           method: 'POST',

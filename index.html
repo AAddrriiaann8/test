@@ -152,13 +152,13 @@
   </div>
 
   <footer class="border-t border-white/5 py-10 px-6 text-center text-text-muted text-[10px] uppercase tracking-widest">
-    <button onclick="seedInitialData()" class="mb-4 hover:text-[#00FFC2] underline decoration-[#00FFC2]/30 underline-offset-4">重置範例數據</button>
+    <button onclick="clearLocalStorageAndReload()" class="mb-4 hover:text-[#00FFC2] underline decoration-[#00FFC2]/30 underline-offset-4">強制清除快取並重新同步試算表</button>
     <p>© 2026 KAI CENAT MARKET 🗿 . POWERED BY GOOGLE SHEETS & LOCALSTORAGE</p>
   </footer>
 
   <script>
     // ⚠️ 務必填入你從 Apps Script 「管理部署」中複製的網頁應用程式 URL
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec"; 
+    const APPS_SCRIPT_URL = "https://script.googleusercontent.com/a/macros/g.puiching.edu.mo/echo?user_content_key=AUkAhnSxkSuck1EAdOq9FaASmnJH14YP3WPkyqJae_V20zb4FvIDqlUmAFQPmNjDO8oLGli8cExHCrXQnE1Pz3w6Xznbzm_OkobMltJZ7fWocEInN5479oD-SwJ_lGpPZ29vbZ-Ut7ivnoTc6mlVL2pBMR9k46i4RjyCVnMerBRsstdLUMn8put1U5fsagpT2EkR8VZKlxIp6CtaAOfYuhq1k5nyOOpWQdFJTJbosPTl_UoFZa2amjysmu4mbW_5gZvuYNd-yzzfAiKMVoYsPqfF1M0Kq44Tc1aBDjoH3DXHgZkVN28d7HU&lib=M5ljAGkNcX2mzu0-zMlrq-qEkoe8mQgmB"; 
     
     const STORAGE_KEY = "records";
     const CATEGORIES = ['全部貨品', '電子產品', '潮流服飾', '家居生活', '書籍', '運動器材'];
@@ -167,15 +167,25 @@
     let currentStatusFilter = 'all';
     let currentSearch = '';
 
-    // 精準歸一化：避免發生欄位對齊失敗、未命名商品等 bug
+    // ✨ 完美歸一化機制：全面相容各種大小寫與錯位，徹底消滅 undefined！
     function normalizeRecord(r) {
+      // 轉換建立時間為本地易讀格式 DD/MM/YYYY
+      let rawDate = r.createdAt || r.CreatedAt || r.Createdat || new Date().toISOString();
+      let formattedDate = "";
+      try {
+        let d = new Date(rawDate);
+        formattedDate = d.getDate() + "/" + (d.getMonth() + 1) + "/" + d.getFullYear();
+      } catch(e) {
+        formattedDate = "28/5/2026";
+      }
+
       return {
         id: String(r.id || r.ID || r.Id || ""),
-        createdAt: r.createdAt || r.CreatedAt || r.Createdat || new Date().toISOString(),
-        title: r.title || r.Title || "未知潮流物件",
+        createdAt: formattedDate,
+        title: r.title || r.Title || "未命名商品",
         price: Number(r.price !== undefined ? r.price : (r.Price !== undefined ? r.Price : 0)),
         category: r.category || r.Category || "其他",
-        content: r.content || r.Content || "主理人很懶，沒有填寫詳細描述。",
+        content: r.content || r.Content || "無詳細描述",
         imageUrl: r.imageUrl || r.ImageUrl || r.Imageurl || "",
         anonId: r.anonId || r.AnonId || "#000",
         status: String(r.status || r.Status || "active").toLowerCase().trim()
@@ -200,10 +210,9 @@
       records.push(newRecord);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
       
-      // ✨ 修正點 1：立刻渲染到畫面上，保證提交後物件不消失
       renderList(); 
       
-      // 背景默默發送給雲端試算表
+      // 背景非同步發送給雲端試算表
       await syncToSheet({ action: "create", record: newRecord });
     }
 
@@ -212,7 +221,7 @@
       return data ? JSON.parse(data).map(normalizeRecord) : [];
     }
 
-    // ✨ 修正點 2：防禦型雲端資料加載
+    // ✨ 雲端抓回機制
     async function fetchFromCloud() {
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
       try {
@@ -224,7 +233,6 @@
           return;
         }
 
-        // 只有在雲端確實有資料時，才覆蓋本地快取，防止洗掉剛提交的數據
         if (data && Array.isArray(data.records) && data.records.length > 0) {
           const cleanRecords = data.records.map(normalizeRecord);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanRecords));
@@ -237,6 +245,7 @@
       }
     }
 
+    // ✨ 重新修正卡片內部渲染欄位，全面對應並消滅 undefined 
     function renderList() {
       const records = loadData();
       const grid = document.getElementById('itemGrid');
@@ -252,8 +261,7 @@
       });
 
       filtered.sort((a, b) => {
-        if (a.status === b.status) return new Date(b.createdAt) - new Date(a.createdAt);
-        return a.status === 'active' ? -1 : 1;
+        return b.id - a.id; // 新商品排在最前面
       });
 
       document.getElementById('activeCount').innerText = records.filter(r => r.status === 'active').length;
@@ -276,7 +284,7 @@
           </div>
           
           <div class="w-full h-40 bg-zinc-900 rounded-xl mb-4 overflow-hidden">
-            <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}" class="w-full h-full object-cover">
+            <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}" class="w-full h-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'">
           </div>
 
           <div class="text-[10px] uppercase text-[#00FFC2] tracking-[0.2em] font-black mb-1 font-display">${item.category}</div>
@@ -288,7 +296,10 @@
               <span class="text-[9px] uppercase font-bold text-text-muted block">Price</span>
               <div class="text-xl font-display font-black text-white">HKD $${item.price}</div>
             </div>
-            <button onclick="deleteRecord('${item.id}')" class="text-white/10 hover:text-red-500 transition-colors text-[10px] mb-1">刪除</button>
+            <div class="text-right">
+              <span class="text-[9px] text-text-muted block mb-1">${item.createdAt}</span>
+              <button onclick="deleteRecord('${item.id}')" class="text-white/10 hover:text-red-500 transition-colors text-[10px]">刪除</button>
+            </div>
           </div>
         </div>
       `).join('');
@@ -326,7 +337,7 @@
 
       const records = loadData().filter(r => r.status === 'active');
       if (records.length === 0) {
-        alert('現時市場上沒有在售商品，請先點擊下方「重置範例數據」或手動提交物件 🗿');
+        alert('現時市場上沒有在售商品，請先提交一些物件吧！🗿');
         return;
       }
 
@@ -360,6 +371,14 @@
       }
     }
 
+    // --- 強制清空快取功能 ---
+    function clearLocalStorageAndReload() {
+      if (confirm('這將清除瀏覽器快取並重新抓取雲端試算表「Records」的全部資料。確認執行？')) {
+        localStorage.clear();
+        window.location.reload();
+      }
+    }
+
     // --- 初始化 UI 綁定 ---
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById('openFormBtn').onclick = toggleModal;
@@ -367,7 +386,7 @@
       document.getElementById('recordForm').onsubmit = (e) => {
         e.preventDefault();
         const newRecord = {
-          id: Date.now() + "_" + Math.random().toString(36).slice(2,6),
+          id: String(Date.now()), // 用時間戳當純數字 ID
           createdAt: new Date().toISOString(),
           title: document.getElementById('title').value,
           price: Number(document.getElementById('price').value),
@@ -425,38 +444,6 @@
       renderList();
       fetchFromCloud();
     });
-
-    function seedInitialData() {
-      if (confirm('重置將清除所有本地紀錄並加入初代潮流商品範例。繼續？')) {
-        const samples = [
-          {
-            id: Date.now() + "_" + Math.random().toString(36).slice(2,6),
-            createdAt: new Date().toISOString(),
-            title: "復古底片相機 95%新",
-            price: 850,
-            category: "電子產品",
-            content: "經典型號，快門清脆，附送兩卷底片。",
-            imageUrl: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400",
-            anonId: "#342",
-            status: "active"
-          },
-          {
-            id: (Date.now()+1) + "_" + Math.random().toString(36).slice(2,6),
-            createdAt: new Date().toISOString(),
-            title: "Kai 同款限定潮流冷帽",
-            price: 299,
-            category: "潮流服飾",
-            content: "激罕街頭配色，保暖百搭，直播出鏡率極高。",
-            imageUrl: "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=400",
-            anonId: "#881",
-            status: "active"
-          }
-        ];
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(samples));
-        renderList();
-        samples.forEach(s => syncToSheet({ action: "create", record: s }));
-      }
-    }
   </script>
 </body>
 </html>

@@ -139,8 +139,8 @@
   </footer>
 
   <script>
-    // 保留原值，不做動
-    const APPS_SCRIPT_URL = https:"https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec";
+    // 嚴格保留原連結，不動它
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec";
     
     const STORAGE_KEY = "records";
     const CATEGORIES = ['全部', '電子產品', '潮流服飾', '家居生活', '學校生活', '其他'];
@@ -149,7 +149,7 @@
     let currentStatusFilter = 'all';
     let currentSearch = '';
 
-    // --- Helper: Sync to Google Sheet ---
+    // --- 同步核心背景傳輸功能 ---
     async function syncToSheet(payload) {
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
       try {
@@ -163,7 +163,7 @@
       }
     }
 
-    // --- 要做的事 1：用 GET 重新實作 fetchRecordsFromSheet ---
+    // --- 實作：用 GET 讀取並歸一化大細階欄位 ---
     function normalizeRecord(record) {
       return {
         id: record.id || record.ID || "",
@@ -187,7 +187,7 @@
       }
     }
 
-    // --- 要做的事 2：將 loadData 改為從 Sheet 讀回，localStorage 做 fallback ---
+    // --- 從 Sheet 讀回，localStorage 做為 Fallback ---
     async function loadData() {
       const remote = await fetchRecordsFromSheet();
       if (remote) {
@@ -198,13 +198,12 @@
       return data ? JSON.parse(data) : [];
     }
 
-    // --- 核心函數：渲染列表 (支援傳入指定資料流防止被舊遠端洗走) ---
+    // --- 渲染核心 (支援直接傳入本機最新狀態流避免覆蓋) ---
     async function renderList(recordsOverride) {
       const records = recordsOverride || await loadData();
       const grid = document.getElementById('itemGrid');
       const empty = document.getElementById('emptyState');
       
-      // 過濾邏輯
       let filtered = records.filter(r => {
         const matchesSearch = r.content.toLowerCase().includes(currentSearch.toLowerCase()) || 
                               r.category.toLowerCase().includes(currentSearch.toLowerCase());
@@ -213,10 +212,8 @@
         return matchesSearch && matchesCat && matchesStatus;
       });
 
-      // 排序：最新優先
       filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-      // 更新統計數
       document.getElementById('activeCount').innerText = records.filter(r => r.status === 'active').length;
 
       if (filtered.length === 0) {
@@ -228,13 +225,11 @@
       empty.classList.add('hidden');
       grid.innerHTML = filtered.map(item => createCard(item)).join('');
       
-      // 動態初始化 Lucide 核心圖標
       if (window.lucide) {
         lucide.createIcons();
       }
     }
 
-    // --- 封裝建立卡片 HTML 功能 ---
     function createCard(item) {
       return `
         <div class="item-card bg-[#121212] border border-white/5 rounded-2xl p-5 flex flex-col relative group">
@@ -252,7 +247,7 @@
       `;
     }
 
-    // --- 核心函數：儲存資料 (本機優先渲染，背景靜默同步) ---
+    // --- 本機優先即時渲染，防止 GET 覆蓋最新留言 ---
     async function saveData(newRecord) {
       const records = await loadData();
       records.push(newRecord);
@@ -261,7 +256,7 @@
       await renderList(records);
     }
 
-    // --- 讚好處理功能 ---
+    // --- 讚好處理 (非同步，帶入最新陣列渲染) ---
     async function handleLike(id) {
       const records = await loadData();
       const index = records.findIndex(r => r.id === id);
@@ -273,7 +268,7 @@
       }
     }
 
-    // --- 分類與狀態切換過濾器 ---
+    // --- 過濾及切換器 ---
     async function setFilter(status) {
       currentStatusFilter = status;
       document.querySelectorAll('.filter-btn').forEach(b => {
@@ -304,7 +299,7 @@
       document.getElementById('submissionModal').classList.toggle('hidden');
     }
 
-    // --- 要做的事 4：加 AI 摘要功能 ---
+    // --- AI 核心對話請求 ---
     async function askAI(userPrompt) {
       const res = await fetch(APPS_SCRIPT_URL, {
         method: "POST",
@@ -337,7 +332,7 @@
       }
     }
 
-    // --- 綁定 UI 提交事件 ---
+    // 表單綁定
     document.getElementById('recordForm').onsubmit = async (e) => {
       e.preventDefault();
       
@@ -355,13 +350,13 @@
       toggleModal();
     };
 
-    // 搜尋即時輸入
+    // 即時輸入搜尋
     document.getElementById('searchInput').oninput = async (e) => {
       currentSearch = e.target.value;
       await renderList();
     };
 
-    // 初始化建置頂部水平分類
+    // 生成分類元素
     const filterContainer = document.getElementById('categoryFilter');
     filterContainer.innerHTML = CATEGORIES.map(cat => `
       <button class="cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all ${cat === currentCategory ? 'bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]' : 'bg-[#121212] text-text-muted border-white/10 hover:border-white/30'}" data-cat="${cat}" onclick="selectCategory('${cat}')">
@@ -369,7 +364,7 @@
       </button>
     `).join('');
 
-    // --- 要做的事 3：簡化 window.onload ---
+    // --- 簡化後的 window.onload 進入點 ---
     window.onload = async () => {
       await renderList();
       if (window.lucide) {
@@ -379,5 +374,3 @@
   </script>
 </body>
 </html>
-
-#Week 5: 加 Gemini AI 摘要 + 從 Sheet 讀回

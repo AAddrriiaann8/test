@@ -157,7 +157,7 @@
   </footer>
 
   <script>
-    // ⚠️ 請記得更換成你最新發布的後端網址
+    // ⚠️ 務必填入你從 Apps Script 「管理部署」中複製的網頁應用程式 URL
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec"; 
     
     const STORAGE_KEY = "records";
@@ -167,15 +167,15 @@
     let currentStatusFilter = 'all';
     let currentSearch = '';
 
-    // 精準歸一化：兼顧大細階，防止出現「未命名商品」
+    // 精準歸一化：避免發生欄位對齊失敗、未命名商品等 bug
     function normalizeRecord(r) {
       return {
         id: String(r.id || r.ID || r.Id || ""),
         createdAt: r.createdAt || r.CreatedAt || r.Createdat || new Date().toISOString(),
-        title: r.title || r.Title || r.Title || "未知潮流物件",
+        title: r.title || r.Title || "未知潮流物件",
         price: Number(r.price !== undefined ? r.price : (r.Price !== undefined ? r.Price : 0)),
         category: r.category || r.Category || "其他",
-        content: r.content || r.Content || "主理人太懶，沒有填寫詳細描述物資。",
+        content: r.content || r.Content || "主理人很懶，沒有填寫詳細描述。",
         imageUrl: r.imageUrl || r.ImageUrl || r.Imageurl || "",
         anonId: r.anonId || r.AnonId || "#000",
         status: String(r.status || r.Status || "active").toLowerCase().trim()
@@ -195,11 +195,16 @@
       }
     }
 
-    function saveData(newRecord) {
+    async function saveData(newRecord) {
       const records = loadData();
       records.push(newRecord);
       localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-      syncToSheet({ action: "create", record: newRecord });
+      
+      // ✨ 修正點 1：立刻渲染到畫面上，保證提交後物件不消失
+      renderList(); 
+      
+      // 背景默默發送給雲端試算表
+      await syncToSheet({ action: "create", record: newRecord });
     }
 
     function loadData() {
@@ -207,18 +212,28 @@
       return data ? JSON.parse(data).map(normalizeRecord) : [];
     }
 
+    // ✨ 修正點 2：防禦型雲端資料加載
     async function fetchFromCloud() {
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
       try {
         const response = await fetch(APPS_SCRIPT_URL);
         const data = await response.json();
-        if (data && Array.isArray(data.records)) {
+        
+        if (data && data.error) {
+          console.error("雲端後端回傳錯誤：", data.error);
+          return;
+        }
+
+        // 只有在雲端確實有資料時，才覆蓋本地快取，防止洗掉剛提交的數據
+        if (data && Array.isArray(data.records) && data.records.length > 0) {
           const cleanRecords = data.records.map(normalizeRecord);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanRecords));
           renderList();
+        } else {
+          console.log("雲端目前全空，保留本地快取運作。");
         }
       } catch (err) {
-        console.warn("Could not fetch from cloud, staying local:", err);
+        console.warn("無法連接雲端，維持本地模式運行:", err);
       }
     }
 
@@ -366,7 +381,6 @@
         saveData(newRecord);
         e.target.reset();
         toggleModal();
-        renderList();
       };
 
       document.getElementById('searchInput').oninput = (e) => {

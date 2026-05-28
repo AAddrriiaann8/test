@@ -9,8 +9,6 @@
   
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-  <script src="https://unpkg.com/lucide@latest"></script>
-
   <style>
     :root {
       --accent: #00FFC2;
@@ -43,9 +41,13 @@
       transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
-    .item-card:hover {
+    .item-card:not(.is-done):hover {
       transform: translateY(-4px) scale(1.02);
       border-color: rgba(0, 255, 194, 0.3);
+    }
+
+    .done-style {
+      filter: grayscale(0.8) opacity(0.5);
     }
   </style>
 </head>
@@ -59,19 +61,18 @@
       
       <div class="hidden md:flex flex-1 justify-center max-w-xl px-12">
         <div class="relative w-full">
-          <input type="text" id="searchInput" placeholder="搜尋商品名稱或敘述..." class="w-full bg-[#121212] border border-white/10 rounded-2xl py-3 px-12 text-sm focus:outline-none focus:border-[#00FFC2]/50 transition-all font-medium">
+          <input type="text" id="searchInput" placeholder="搜尋貨品..." class="w-full bg-[#121212] border border-white/10 rounded-2xl py-3 px-12 text-sm focus:outline-none focus:border-[#00FFC2]/50 transition-all font-medium">
           <div class="absolute left-4 top-1/2 -translate-y-1/2 opacity-40">🔍</div>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <button onclick="handleAISummary()" id="aiBtn" class="flex items-center gap-2 bg-zinc-800 text-zinc-100 px-4 py-2 rounded-full font-medium hover:bg-zinc-700 transition-colors active:scale-95 border border-zinc-700 disabled:opacity-50">
-          <i data-lucide="sparkles" class="w-4 h-4 text-[#00FFC2]"></i>
-          <span id="aiBtnText">AI 市場分析</span>
+        <button onclick="handleAISummary()" id="aiBtn" class="flex items-center gap-2 bg-zinc-800 text-zinc-100 px-4 py-2 rounded-full text-xs font-semibold hover:bg-zinc-700 transition-all active:scale-95 border border-zinc-700 disabled:opacity-50">
+          <span class="text-[#00FFC2]">✨</span> <span id="aiBtnText">AI 市場摘要</span>
         </button>
 
-        <button id="openFormBtn" onclick="toggleModal()" class="bg-[#00FFC2] text-black px-6 py-3 rounded-xl font-bold text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,255,194,0.3)]">
-          + 上架新商品
+        <button id="openFormBtn" class="bg-[#00FFC2] text-black px-6 py-3 rounded-xl font-bold text-sm hover:scale-105 transition-all shadow-[0_0_20px_rgba(0,255,194,0.3)]">
+          + 提交物件
         </button>
       </div>
     </div>
@@ -81,9 +82,9 @@
     <div class="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
       <div>
         <h1 class="text-4xl font-display font-bold text-white mb-2 leading-tight">
-          探索頂級潮流交易 <span class="text-[#00FFC2] italic">LocalStorage Edition</span>
+          挖掘獨特貨品 <span class="text-[#00FFC2] italic">LocalStorage Edition</span>
         </h1>
-        <p class="text-text-muted text-sm max-w-md">匿名交易，雲端同步。在這裡自由買賣你想要的 KAI 風格商品。</p>
+        <p class="text-text-muted text-sm max-w-md">匿名交易，本地儲存。這裡的一切只存在於你的瀏覽器中。</p>
       </div>
       
       <div class="flex flex-col gap-4 min-w-[320px]">
@@ -91,15 +92,14 @@
         
         <div class="flex items-center justify-between gap-4 border-t border-white/5 pt-4">
           <div class="flex gap-2" id="statusFilters">
-            <button onclick="setFilter('all')" data-status="all" class="filter-btn active px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border border-[#00FFC2] bg-[#00FFC2] text-black">全部商品</button>
-            <button onclick="setFilter('active')" data-status="active" class="filter-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 bg-[#121212] text-text-muted">現貨供應</button>
+            <button data-status="all" class="filter-btn active px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border border-[#00FFC2] bg-[#00FFC2] text-black">全部</button>
+            <button data-status="active" class="filter-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 bg-[#121212] text-text-muted">在售</button>
+            <button data-status="done" class="filter-btn px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border border-white/10 bg-[#121212] text-text-muted">已售</button>
           </div>
 
           <div class="flex gap-3 text-[10px] font-bold bg-black/40 px-3 py-1.5 rounded-full border border-white/5">
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-[#00FFC2] animate-pulse-accent"></span>
-              <span>總架上商品：<span id="activeCount" class="text-[#00FFC2]">0</span></span>
-            </div>
+            <div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-[#00FFC2] animate-pulse-accent"></span><span id="activeCount" class="text-[#00FFC2]">0</span></div>
+            <div class="flex items-center gap-1.5 border-l border-white/10 pl-3"><span class="w-1.5 h-1.5 rounded-full bg-white/20"></span><span id="doneCount" class="text-text-muted">0</span></div>
           </div>
         </div>
       </div>
@@ -109,126 +109,148 @@
     
     <div id="emptyState" class="hidden flex flex-col items-center justify-center py-20 text-text-muted">
       <div class="text-5xl mb-4">🗿</div>
-      <p>目前市場上沒有任何商品...</p>
+      <p>這裡目前空空如也...</p>
     </div>
   </main>
 
   <div id="submissionModal" class="hidden fixed inset-0 z-[200] flex items-center justify-center p-4">
     <div class="absolute inset-0 bg-black/80 backdrop-blur-sm" onclick="toggleModal()"></div>
     <div class="relative w-full max-w-lg bg-[#121212] border border-white/10 rounded-3xl p-8 shadow-2xl">
-      <h2 class="text-2xl font-bold text-white mb-6">上架全新商品</h2>
+      <h2 class="text-2xl font-bold text-white mb-6">提交新物件</h2>
       <form id="recordForm" class="space-y-4">
-        <div>
-          <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">商品分類</label>
-          <select id="category" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none appearance-none">
-            <option value="電子產品">電子產品</option>
-            <option value="潮流服飾">潮流服飾</option>
-            <option value="家居生活">家居生活</option>
-            <option value="虛擬寶物">虛擬寶物</option>
-            <option value="其他">其他</option>
-          </select>
+        <div class="grid grid-cols-2 gap-4">
+          <div class="col-span-2">
+            <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">物件名稱</label>
+            <input required type="text" id="title" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">售價 (HKD)</label>
+            <input required type="number" id="price" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none">
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">分類</label>
+            <select id="category" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none appearance-none">
+              <option value="電子產品">電子產品</option>
+              <option value="潮流服飾">潮流服飾</option>
+              <option value="家居生活">家居生活</option>
+              <option value="書籍">書籍</option>
+              <option value="運動器材">運動器材</option>
+            </select>
+          </div>
         </div>
         <div>
-          <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">商品規格 / 詳細描述</label>
-          <textarea required rows="4" id="content" placeholder="請輸入商品名稱、細節與價錢..." class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none resize-none"></textarea>
+          <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">圖片網址</label>
+          <input type="url" id="imageUrl" placeholder="https://..." class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none">
         </div>
-        <button type="submit" class="w-full bg-[#00FFC2] text-black font-bold py-4 rounded-xl hover:opacity-90 transition-all mt-4">確認上架到市場</button>
+        <div>
+          <label class="block text-[10px] font-bold text-text-muted uppercase mb-2">詳細描述</label>
+          <textarea required rows="3" id="content" class="w-full bg-black/30 border border-white/10 rounded-xl p-3 text-sm text-white focus:border-[#00FFC2]/50 outline-none resize-none"></textarea>
+        </div>
+        <button type="submit" class="w-full bg-[#00FFC2] text-black font-bold py-4 rounded-xl hover:opacity-90 transition-all mt-4">確認提交</button>
       </form>
     </div>
   </div>
 
   <footer class="border-t border-white/5 py-10 px-6 text-center text-text-muted text-[10px] uppercase tracking-widest">
-    <p>© 2026 KAI CENAT MARKET 🗿 . ALL RIGHTS RESERVED.</p>
+    <button onclick="seedInitialData()" class="mb-4 hover:text-[#00FFC2] underline decoration-[#00FFC2]/30 underline-offset-4">重置範例數據</button>
+    <p>© 2026 KAI CENAT MARKET 🗿 . POWERED BY GOOGLE SHEETS & LOCALSTORAGE</p>
   </footer>
 
   <script>
-    // 保留原本完全一致的 URL 
-    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec";
+    // 請在此處貼上你新發布的 Apps Script 網址
+    const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec"; 
     
     const STORAGE_KEY = "records";
-    const CATEGORIES = ['全部', '電子產品', '潮流服飾', '家居生活', '虛擬寶物', '其他'];
+    const CATEGORIES = ['全部貨品', '電子產品', '潮流服飾', '家居生活', '書籍', '運動器材'];
     
-    let currentCategory = '全部';
+    let currentCategory = '全部貨品';
     let currentStatusFilter = 'all';
     let currentSearch = '';
 
-    // --- 同步核心背景傳輸功能 ---
+    // 歸一化防禦機制：確保讀取欄位不論大細階均正常運作
+    function normalizeRecord(r) {
+      return {
+        id: r.id || r.ID || "",
+        createdAt: r.createdAt || r.CreatedAt || new Date().toISOString(),
+        title: r.title || r.Title || "未命名商品",
+        price: Number(r.price !== undefined ? r.price : r.Price) || 0,
+        category: r.category || r.Category || "其他",
+        content: r.content || r.Content || "",
+        imageUrl: r.imageUrl || r.ImageUrl || "",
+        anonId: r.anonId || r.AnonId || "#000",
+        status: r.status || r.Status || "active"
+      };
+    }
+
+    // --- Helper: Sync to Google Sheet ---
     async function syncToSheet(payload) {
-      if (!APPS_SCRIPT_URL) return;
+      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
       try {
+        // 使用 text/plain 發送避免觸發不必要的 Preflight CORS 阻擋
         await fetch(APPS_SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify(payload)
         });
+        console.log("Cloud sync action success:", payload.action);
       } catch (err) {
-        console.warn("Cloud sync failed:", err);
+        console.warn("Cloud sync request failed:", err);
       }
     }
 
-    // --- 大細階與 Likes 的強效歸一化防禦機制 ---
-    function normalizeRecord(record) {
-      let rawLikes = record.likes !== undefined ? record.likes : record.Likes;
-      let cleanLikes = Number(rawLikes);
-      if (isNaN(cleanLikes)) {
-        cleanLikes = 0; // 絕不允許出現 undefined 或 NaN
-      }
-      
-      return {
-        id: record.id || record.ID || "",
-        createdAt: record.createdAt || record.CreatedAt || "",
-        content: record.content || record.Content || "",
-        category: record.category || record.Category || "其他",
-        likes: cleanLikes,
-        status: record.status || record.Status || "active"
-      };
+    function saveData(newRecord) {
+      const records = loadData();
+      records.push(newRecord);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      syncToSheet({ action: "create", record: newRecord });
     }
 
-    async function fetchRecordsFromSheet() {
-      try {
-        const res = await fetch(APPS_SCRIPT_URL);
-        const data = await res.json();
-        return Array.isArray(data.records) ? data.records.map(normalizeRecord) : null;
-      } catch (e) {
-        console.warn("無法連接後端，啟動本地儲存防護網", e);
-        return null;
-      }
-    }
-
-    // --- 從本地與雲端載入資料 ---
-    async function loadData() {
-      const remote = await fetchRecordsFromSheet();
-      if (remote) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(remote));
-        return remote;
-      }
+    function loadData() {
       const data = localStorage.getItem(STORAGE_KEY);
-      return data ? JSON.parse(data) : [];
+      return data ? JSON.parse(data).map(normalizeRecord) : [];
     }
 
-    // --- 渲染市場商品清單 ---
-    async function renderList(recordsOverride) {
-      // 安全閥：如果找不到對應元件，代表網格未加載，直接跳出防止 Crash
+    // --- 從 Cloud 載入最新數據 ---
+    async function fetchFromCloud() {
+      if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
+      try {
+        console.log("Fetching latest data from cloud...");
+        const response = await fetch(APPS_SCRIPT_URL);
+        const data = await response.json();
+        
+        if (data && Array.isArray(data.records)) {
+          const cleanRecords = data.records.map(normalizeRecord);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanRecords));
+          renderList();
+          console.log("Successfully rehydrated from cloud:", cleanRecords.length);
+        }
+      } catch (err) {
+        console.warn("Could not fetch from cloud, staying local:", err);
+      }
+    }
+
+    // --- 核心函數：渲染列表 ---
+    function renderList() {
+      const records = loadData();
       const grid = document.getElementById('itemGrid');
+      const empty = document.getElementById('emptyState');
       if (!grid) return;
       
-      const empty = document.getElementById('emptyState');
-      const records = recordsOverride || await loadData();
-      
       let filtered = records.filter(r => {
-        const matchesSearch = r.content.toLowerCase().includes(currentSearch.toLowerCase()) || 
-                              r.category.toLowerCase().includes(currentSearch.toLowerCase());
-        const matchesCat = currentCategory === '全部' || r.category === currentCategory;
+        const matchesSearch = r.title.toLowerCase().includes(currentSearch.toLowerCase()) || 
+                              r.content.toLowerCase().includes(currentSearch.toLowerCase());
+        const matchesCat = currentCategory === '全部貨品' || r.category === currentCategory;
         const matchesStatus = currentStatusFilter === 'all' || r.status === currentStatusFilter;
         return matchesSearch && matchesCat && matchesStatus;
       });
 
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      filtered.sort((a, b) => {
+        if (a.status === b.status) return new Date(b.createdAt) - new Date(a.createdAt);
+        return a.status === 'active' ? -1 : 1;
+      });
 
-      const activeCountEl = document.getElementById('activeCount');
-      if (activeCountEl) {
-        activeCountEl.innerText = records.filter(r => r.status === 'active').length;
-      }
+      document.getElementById('activeCount').innerText = records.filter(r => r.status === 'active').length;
+      document.getElementById('doneCount').innerText = records.filter(r => r.status === 'done').length;
 
       if (filtered.length === 0) {
         grid.innerHTML = '';
@@ -237,164 +259,201 @@
       }
 
       if (empty) empty.classList.add('hidden');
-      grid.innerHTML = filtered.map(item => createCard(item)).join('');
-      
-      if (window.lucide) {
-        lucide.createIcons();
-      }
-    }
-
-    function createCard(item) {
-      return `
-        <div class="item-card bg-[#121212] border border-white/5 rounded-2xl p-5 flex flex-col relative group">
-          <div class="text-[10px] uppercase text-[#00FFC2] tracking-[0.2em] font-black mb-2 font-display">${item.category}</div>
-          <p class="text-sm text-white/90 leading-relaxed mb-6 flex-1 whitespace-pre-wrap">${item.content}</p>
-
-          <div class="mt-auto pt-4 border-t border-white/5 flex justify-between items-center">
-            <button onclick="handleLike('${item.id}')" class="flex items-center gap-2 text-xs font-bold text-text-muted hover:text-[#00FFC2] transition-colors bg-white/5 px-3 py-1.5 rounded-full border border-white/5 group/like">
-              <i data-lucide="heart" class="w-3.5 h-3.5 text-red-500 fill-red-500 transition-transform group-hover/like:scale-110"></i>
-              <span>${item.likes}</span>
+      grid.innerHTML = filtered.map(item => `
+        <div class="item-card bg-[#121212] border border-white/5 rounded-2xl p-4 flex flex-col relative group ${item.status === 'done' ? 'done-style' : ''}">
+          <div class="absolute top-4 right-4 z-10 flex gap-2">
+            <button onclick="toggleStatus('${item.id}')" class="text-[9px] px-2 py-1 rounded-full border font-bold uppercase transition-all ${item.status === 'done' ? 'bg-white/5 text-white/40 border-white/10' : 'bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]/20 hover:bg-[#00FFC2] hover:text-black'}">
+              ${item.status === 'done' ? '已售出 🗿' : '在售中'}
             </button>
-            <span class="text-[9px] text-text-muted">${item.createdAt ? new Date(item.createdAt).toLocaleDateString() : ''}</span>
+            <div class="text-[9px] bg-black/60 px-2 py-1 rounded-full text-text-muted border border-white/5 font-bold">${item.anonId}</div>
+          </div>
+          
+          <div class="w-full h-40 bg-zinc-900 rounded-xl mb-4 overflow-hidden">
+            <img src="${item.imageUrl || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400'}" class="w-full h-full object-cover">
+          </div>
+
+          <div class="text-[10px] uppercase text-[#00FFC2] tracking-[0.2em] font-black mb-1 font-display">${item.category}</div>
+          <h3 class="text-lg font-display font-bold text-white mb-1 truncate">${item.title}</h3>
+          <p class="text-xs text-text-muted line-clamp-2 mb-6 h-8">${item.content}</p>
+
+          <div class="mt-auto pt-4 border-t border-white/5 flex justify-between items-end">
+            <div>
+              <span class="text-[9px] uppercase font-bold text-text-muted block">Price</span>
+              <div class="text-xl font-display font-black text-white">HKD $${item.price}</div>
+            </div>
+            <button onclick="deleteRecord('${item.id}')" class="text-white/10 hover:text-red-500 transition-colors text-[10px] mb-1">刪除</button>
           </div>
         </div>
-      `;
+      `).join('');
     }
 
-    // --- 本機優先即時上架商品 ---
-    async function saveData(newRecord) {
-      const records = await loadData();
-      records.push(newRecord);
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-      syncToSheet({ action: "create", record: newRecord });
-      await renderList(records);
-    }
-
-    // --- 點讚意向度更新 ---
-    async function handleLike(id) {
-      const records = await loadData();
-      const index = records.findIndex(r => r.id === id);
-      if (index !== -1) {
-        records[index].likes = (records[index].likes || 0) + 1;
+    function toggleStatus(id) {
+      const records = loadData();
+      const idx = records.findIndex(r => r.id === id);
+      if (idx > -1) {
+        const newStatus = records[idx].status === 'active' ? 'done' : 'active';
+        records[idx].status = newStatus;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-        syncToSheet({ action: "update", id: id, changes: { likes: records[index].likes } });
-        await renderList(records);
+        renderList();
+        syncToSheet({ action: "update", id: id, changes: { status: newStatus } });
       }
     }
 
-    // --- 狀態篩選與過濾 ---
-    async function setFilter(status) {
-      currentStatusFilter = status;
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.classList.remove('active', 'bg-[#00FFC2]', 'text-black', 'border-[#00FFC2]');
-        b.classList.add('bg-[#121212]', 'text-text-muted', 'border-white/10');
-      });
-      const activeBtn = document.querySelector(`[data-status="${status}"]`);
-      if (activeBtn) {
-        activeBtn.classList.add('active', 'bg-[#00FFC2]', 'text-black', 'border-[#00FFC2]');
-        activeBtn.classList.remove('bg-[#121212]', 'text-text-muted', 'border-white/10');
-      }
-      await renderList();
-    }
-
-    async function selectCategory(cat) {
-      currentCategory = cat;
-      document.querySelectorAll('.cat-btn').forEach(b => {
-        if (b.dataset.cat === currentCategory) {
-          b.className = "cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]";
-        } else {
-          b.className = "cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all bg-[#121212] text-text-muted border-white/10 hover:border-white/30";
-        }
-      });
-      await renderList();
+    function deleteRecord(id) {
+      if (!confirm('確認從市場下架並刪除此項目？')) return;
+      const records = loadData().filter(r => r.id !== id);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+      renderList();
+      syncToSheet({ action: "delete", id: id });
     }
 
     function toggleModal() {
-      const modal = document.getElementById('submissionModal');
-      if (modal) modal.classList.toggle('hidden');
+      document.getElementById('submissionModal').classList.toggle('hidden');
     }
 
-    // --- AI 市場對話請求 ---
-    async function askAI(userPrompt) {
-      const res = await fetch(APPS_SCRIPT_URL, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain" },
-        body: JSON.stringify({ action: "askAI", prompt: userPrompt })
-      });
-      const data = await res.json();
-      return data.result || data.error || "AI 暫時未能提供分析報告";
-    }
-
+    // --- AI 市場摘要請求引擎 ---
     async function handleAISummary() {
       const btn = document.getElementById('aiBtn');
       const text = document.getElementById('aiBtnText');
       if (!btn || !text) return;
 
+      const records = loadData().filter(r => r.status === 'active');
+      if (records.length === 0) {
+        alert('現時市場上沒有在售商品，無法生成分析報告 🗿');
+        return;
+      }
+
       btn.disabled = true;
       text.textContent = '分析中...';
+
       try {
-        const records = await loadData();
-        if (records.length === 0) { alert('現時市場未有足夠商品進行分析數據'); return; }
-        
-        const marketInput = records.slice(0, 30).map(r =>
-          `[${r.category}] ${r.content} (關注度: ${r.likes}❤️)`
+        // 打包現有所有在售商品簡介
+        const marketSnapshot = records.slice(0, 25).map(r => 
+          `- [${r.category}] ${r.title} / 售價: HKD $${r.price} (說明: ${r.content})`
         ).join('\n');
+
+        const aiPrompt = "你現在是 KAI CENAT MARKET 的資深主理人。請根據以下目前架上最新在售商品清單，使用繁體中文（帶點酷炫幽默的美式潮流街頭口吻），用 3 至 4 句短文為用戶總結出當前的商品趨勢、好物推薦以及市場總覽：\n\n" + marketSnapshot;
+
+        const response = await fetch(APPS_SCRIPT_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain" },
+          body: JSON.stringify({ action: "askAI", prompt: aiPrompt })
+        });
         
-        const prompt = '以下是 KAI CENAT MARKET 的商品架上清單。請以專業且帶點幽默美式潮流的口吻（使用繁體中文），用 3-4 句為買家生成一份簡短的市場熱度與熱門商品趨勢分析報告:\n\n' + marketInput;
-        
-        const result = await askAI(prompt);
-        alert(result);
+        const data = await response.json();
+        if (data.result) {
+          alert(data.result);
+        } else {
+          alert("AI 報告生成失敗：" + (data.error || "未知錯誤"));
+        }
       } catch (e) {
-        alert('AI 分析出錯：' + e.message);
+        alert("無法連接到 AI 引擎: " + e.message);
       } finally {
         btn.disabled = false;
-        text.textContent = 'AI 市場分析';
+        text.textContent = 'AI 市場摘要';
       }
     }
 
-    // 介面初始化
-    document.addEventListener("DOMContentLoaded", async () => {
-      // 綁定表單
-      const form = document.getElementById('recordForm');
-      if (form) {
-        form.onsubmit = async (e) => {
-          e.preventDefault();
-          const newRecord = {
+    // --- 初始化 UI 綁定 ---
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById('openFormBtn').onclick = toggleModal;
+
+      document.getElementById('recordForm').onsubmit = (e) => {
+        e.preventDefault();
+        const newRecord = {
+          id: Date.now() + "_" + Math.random().toString(36).slice(2,6),
+          createdAt: new Date().toISOString(),
+          title: document.getElementById('title').value,
+          price: Number(document.getElementById('price').value),
+          category: document.getElementById('category').value,
+          content: document.getElementById('content').value,
+          imageUrl: document.getElementById('imageUrl').value,
+          anonId: "#" + Math.floor(Math.random() * 900 + 100),
+          status: "active"
+        };
+
+        saveData(newRecord);
+        e.target.reset();
+        toggleModal();
+        renderList();
+      };
+
+      document.getElementById('searchInput').oninput = (e) => {
+        currentSearch = e.target.value;
+        renderList();
+      };
+
+      // 產生分類按鈕
+      const filterContainer = document.getElementById('categoryFilter');
+      filterContainer.innerHTML = CATEGORIES.map(cat => `
+        <button class="cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all ${cat === currentCategory ? 'bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]' : 'bg-[#121212] text-text-muted border-white/10 hover:border-white/30'}" data-cat="${cat}">
+          ${cat}
+        </button>
+      `).join('');
+
+      filterContainer.onclick = (e) => {
+        if (e.target.dataset.cat) {
+          currentCategory = e.target.dataset.cat;
+          document.querySelectorAll('.cat-btn').forEach(b => {
+            if (b.dataset.cat === currentCategory) {
+              b.className = "cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]";
+            } else {
+              b.className = "cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all bg-[#121212] text-text-muted border-white/10 hover:border-white/30";
+            }
+          });
+          renderList();
+        }
+      };
+
+      document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.onclick = () => {
+          currentStatusFilter = btn.dataset.status;
+          document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.remove('active', 'bg-[#00FFC2]', 'text-black', 'border-[#00FFC2]');
+            b.classList.add('bg-[#121212]', 'text-text-muted', 'border-white/10');
+          });
+          btn.classList.add('active', 'bg-[#00FFC2]', 'text-black', 'border-[#00FFC2]');
+          btn.classList.remove('bg-[#121212]', 'text-text-muted', 'border-white/10');
+          renderList();
+        };
+      });
+
+      renderList();
+      fetchFromCloud();
+    });
+
+    // --- 範例數據生成器 ---
+    function seedInitialData() {
+      if (confirm('重置將清除所有本地紀錄並加入初代潮流商品範例。繼續？')) {
+        const samples = [
+          {
             id: Date.now() + "_" + Math.random().toString(36).slice(2,6),
             createdAt: new Date().toISOString(),
-            content: document.getElementById('content').value,
-            category: document.getElementById('category').value,
-            likes: 0,
+            title: "復古底片相機 95%新",
+            price: 850,
+            category: "電子產品",
+            content: "經典型號，快門清脆，附送兩卷底片。",
+            imageUrl: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400",
+            anonId: "#342",
             status: "active"
-          };
-          await saveData(newRecord);
-          e.target.reset();
-          toggleModal();
-        };
+          },
+          {
+            id: (Date.now()+1) + "_" + Math.random().toString(36).slice(2,6),
+            createdAt: new Date().toISOString(),
+            title: "Kai 同款限定潮流冷帽",
+            price: 299,
+            category: "潮流服飾",
+            content: "激罕街頭配色，保暖百搭，直播出鏡率極高。",
+            imageUrl: "https://images.unsplash.com/photo-1576871337632-b9aef4c17ab9?w=400",
+            anonId: "#881",
+            status: "active"
+          }
+        ];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(samples));
+        renderList();
+        samples.forEach(s => syncToSheet({ action: "create", record: s }));
       }
-
-      // 綁定搜尋輸入
-      const search = document.getElementById('searchInput');
-      if (search) {
-        search.oninput = async (e) => {
-          currentSearch = e.target.value;
-          await renderList();
-        };
-      }
-
-      // 渲染動態分類按鈕
-      const filterContainer = document.getElementById('categoryFilter');
-      if (filterContainer) {
-        filterContainer.innerHTML = CATEGORIES.map(cat => `
-          <button class="cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all ${cat === currentCategory ? 'bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]' : 'bg-[#121212] text-text-muted border-white/10 hover:border-white/30'}" data-cat="${cat}" onclick="selectCategory('${cat}')">
-            ${cat}
-          </button>
-        `).join('');
-      }
-
-      // 執行首次資料渲染
-      await renderList();
-    });
+    }
   </script>
 </body>
 </html>

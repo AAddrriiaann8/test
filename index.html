@@ -157,7 +157,7 @@
   </footer>
 
   <script>
-    // 請在此處貼上你新發布的 Apps Script 網址
+    // ⚠️ 請記得更換成你最新發布的後端網址
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyIhay5qQzdhwubDZpaZVmDc_1GandsAjvBHtcZnQltXyPKCw1wFHX9jnLlShL8kXBR/exec"; 
     
     const STORAGE_KEY = "records";
@@ -167,34 +167,31 @@
     let currentStatusFilter = 'all';
     let currentSearch = '';
 
-    // 歸一化防禦機制：確保讀取欄位不論大細階均正常運作
+    // 精準歸一化：兼顧大細階，防止出現「未命名商品」
     function normalizeRecord(r) {
       return {
-        id: r.id || r.ID || "",
-        createdAt: r.createdAt || r.CreatedAt || new Date().toISOString(),
-        title: r.title || r.Title || "未命名商品",
-        price: Number(r.price !== undefined ? r.price : r.Price) || 0,
+        id: String(r.id || r.ID || r.Id || ""),
+        createdAt: r.createdAt || r.CreatedAt || r.Createdat || new Date().toISOString(),
+        title: r.title || r.Title || r.Title || "未知潮流物件",
+        price: Number(r.price !== undefined ? r.price : (r.Price !== undefined ? r.Price : 0)),
         category: r.category || r.Category || "其他",
-        content: r.content || r.Content || "",
-        imageUrl: r.imageUrl || r.ImageUrl || "",
+        content: r.content || r.Content || "主理人太懶，沒有填寫詳細描述物資。",
+        imageUrl: r.imageUrl || r.ImageUrl || r.Imageurl || "",
         anonId: r.anonId || r.AnonId || "#000",
-        status: r.status || r.Status || "active"
+        status: String(r.status || r.Status || "active").toLowerCase().trim()
       };
     }
 
-    // --- Helper: Sync to Google Sheet ---
     async function syncToSheet(payload) {
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
       try {
-        // 使用 text/plain 發送避免觸發不必要的 Preflight CORS 阻擋
         await fetch(APPS_SCRIPT_URL, {
           method: "POST",
           headers: { "Content-Type": "text/plain" },
           body: JSON.stringify(payload)
         });
-        console.log("Cloud sync action success:", payload.action);
       } catch (err) {
-        console.warn("Cloud sync request failed:", err);
+        console.warn("Cloud sync failed:", err);
       }
     }
 
@@ -210,26 +207,21 @@
       return data ? JSON.parse(data).map(normalizeRecord) : [];
     }
 
-    // --- 從 Cloud 載入最新數據 ---
     async function fetchFromCloud() {
       if (!APPS_SCRIPT_URL || APPS_SCRIPT_URL.includes("PASTE_YOUR")) return;
       try {
-        console.log("Fetching latest data from cloud...");
         const response = await fetch(APPS_SCRIPT_URL);
         const data = await response.json();
-        
         if (data && Array.isArray(data.records)) {
           const cleanRecords = data.records.map(normalizeRecord);
           localStorage.setItem(STORAGE_KEY, JSON.stringify(cleanRecords));
           renderList();
-          console.log("Successfully rehydrated from cloud:", cleanRecords.length);
         }
       } catch (err) {
         console.warn("Could not fetch from cloud, staying local:", err);
       }
     }
 
-    // --- 核心函數：渲染列表 ---
     function renderList() {
       const records = loadData();
       const grid = document.getElementById('itemGrid');
@@ -319,7 +311,7 @@
 
       const records = loadData().filter(r => r.status === 'active');
       if (records.length === 0) {
-        alert('現時市場上沒有在售商品，無法生成分析報告 🗿');
+        alert('現時市場上沒有在售商品，請先點擊下方「重置範例數據」或手動提交物件 🗿');
         return;
       }
 
@@ -327,12 +319,11 @@
       text.textContent = '分析中...';
 
       try {
-        // 打包現有所有在售商品簡介
-        const marketSnapshot = records.slice(0, 25).map(r => 
-          `- [${r.category}] ${r.title} / 售價: HKD $${r.price} (說明: ${r.content})`
+        const marketSnapshot = records.slice(0, 20).map(r => 
+          `- [${r.category}] 商品名稱:${r.title} | 售價:HKD $${r.price} | 詳情:${r.content}`
         ).join('\n');
 
-        const aiPrompt = "你現在是 KAI CENAT MARKET 的資深主理人。請根據以下目前架上最新在售商品清單，使用繁體中文（帶點酷炫幽默的美式潮流街頭口吻），用 3 至 4 句短文為用戶總結出當前的商品趨勢、好物推薦以及市場總覽：\n\n" + marketSnapshot;
+        const aiPrompt = "你現在是 KAI CENAT MARKET 的美式潮流主理人。請根據以下架上在售商品清單，使用繁體中文（帶有街頭酷炫幽默、多用潮流口吻如 '🗿', 'No Cap', 'W'），用 3 至 4 句短文為用戶總結出當前的熱門商品趨勢、好物推薦以及市場氣氛：\n\n" + marketSnapshot;
 
         const response = await fetch(APPS_SCRIPT_URL, {
           method: "POST",
@@ -344,10 +335,10 @@
         if (data.result) {
           alert(data.result);
         } else {
-          alert("AI 報告生成失敗：" + (data.error || "未知錯誤"));
+          alert("AI 報告生成失敗：" + (data.error || "後端返回未知錯誤"));
         }
       } catch (e) {
-        alert("無法連接到 AI 引擎: " + e.message);
+        alert("無法連接到 AI 後端: " + e.message);
       } finally {
         btn.disabled = false;
         text.textContent = 'AI 市場摘要';
@@ -383,7 +374,6 @@
         renderList();
       };
 
-      // 產生分類按鈕
       const filterContainer = document.getElementById('categoryFilter');
       filterContainer.innerHTML = CATEGORIES.map(cat => `
         <button class="cat-btn whitespace-nowrap px-4 py-2 rounded-full text-[10px] font-bold border transition-all ${cat === currentCategory ? 'bg-[#00FFC2]/10 text-[#00FFC2] border-[#00FFC2]' : 'bg-[#121212] text-text-muted border-white/10 hover:border-white/30'}" data-cat="${cat}">
@@ -422,7 +412,6 @@
       fetchFromCloud();
     });
 
-    // --- 範例數據生成器 ---
     function seedInitialData() {
       if (confirm('重置將清除所有本地紀錄並加入初代潮流商品範例。繼續？')) {
         const samples = [
